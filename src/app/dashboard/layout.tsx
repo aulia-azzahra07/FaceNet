@@ -111,14 +111,8 @@ export default function DashboardLayout({
           </nav>
         </div>
 
-        {/* Footer Sidebar: Nama pengguna & peran + Keluar */}
+        {/* Footer Sidebar: Keluar */}
         <div className="border-t border-blue-700/60 pt-4 text-xs">
-          <div className="mb-3 rounded-xl bg-blue-950/60 p-3 border border-blue-800/80">
-            <p className="font-bold text-white truncate">{user?.nama}</p>
-            <p className="mt-0.5 text-sky-300 font-medium">
-              {isAdmin ? 'Admin' : 'Pimpinan'} • {user?.nip}
-            </p>
-          </div>
           <button
             onClick={handleLogout}
             className="w-full rounded-xl border border-sky-400/40 bg-blue-800/60 py-2 text-xs font-bold text-sky-100 transition hover:bg-sky-500 hover:text-white hover:border-sky-400"
