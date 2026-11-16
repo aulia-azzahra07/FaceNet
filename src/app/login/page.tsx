@@ -102,10 +102,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-5 text-center text-[11px] font-medium text-slate-500">
-            Hak akses (Admin / Pimpinan) ditentukan oleh akun
-          </p>
-
           {/* Demo helper */}
           <div className="mt-5 border-t border-sky-100 pt-3.5 text-center text-[11px] text-slate-500">
             <span className="mb-1.5 block font-medium text-blue-900/70">
