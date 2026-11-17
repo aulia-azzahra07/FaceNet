@@ -28,6 +28,8 @@ export async function GET(
       isActive: emp.isActive,
       hasPin: Boolean(emp.pinHash),
       hasFace: Boolean(emp.faceEmbedding && emp.faceEmbedding.length > 0),
+      faceEmbedding: emp.faceEmbedding || null,
+      pinHash: emp.pinHash || null,
     },
   });
 }

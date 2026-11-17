@@ -10,11 +10,11 @@ import {
 } from '@/types';
 import bcrypt from 'bcryptjs';
 
-// Pre-seeded locations: Lingkungan Kantor Perusahaan XYZ
+// Pre-seeded locations: Lingkungan Kampus Fasilkom UNSRI Bukit & Cabang
 const DEFAULT_LOCATIONS: AreaKerja[] = [
   {
     id: 'LOK-001',
-    nama: 'Kantor Pusat PT XYZ',
+    nama: 'Fasilkom UNSRI Kampus Bukit',
     latitude: -2.984900,
     longitude: 104.732238,
     radiusMeters: 150.0,
@@ -527,25 +527,56 @@ class InMemoryDataStore {
       throw new Error('Ditolak: Perangkat tidak sesuai dengan yang terikat pada akun!');
     }
 
-    // Determine status: Tepat Waktu or Terlambat
-    let determinedStatus: any = record.status || 'HADIR_TEPAT_WAKTU';
+    // Ikat perangkat jika pegawai belum memiliki device terikat
+    if (!emp.deviceId && record.deviceId) {
+      emp.deviceId = record.deviceId;
+    }
+
+    const recDate = record.tanggal || (record.timestamp ? record.timestamp.split('T')[0] : todayStr);
+
+    let timePart = '08:00:00';
     if (record.timestamp) {
       try {
-        const timePart = new Date(record.timestamp).toLocaleTimeString('id-ID', { hour12: false });
-        if (timePart > '08:00:00') {
-          determinedStatus = 'HADIR_TERLAMBAT';
-        }
+        const d = new Date(record.timestamp);
+        timePart = d.toLocaleTimeString('id-ID', { hour12: false });
       } catch {}
+    }
+
+    // Determine status: Tepat Waktu or Terlambat
+    let determinedStatus: any = record.status || 'HADIR_TEPAT_WAKTU';
+    if (record.type === 'MASUK') {
+      if (timePart > '08:15:00') {
+        determinedStatus = 'HADIR_TERLAMBAT';
+      } else {
+        determinedStatus = 'HADIR_TEPAT_WAKTU';
+      }
+    }
+
+    // Update existing day attendance if exists (e.g. employee check-in then check-out)
+    const existingDayIndex = this.attendances.findIndex(
+      (a) => a.nip === record.nip && (a.tanggal === recDate || (a.timestamp && a.timestamp.startsWith(recDate)))
+    );
+
+    if (existingDayIndex !== -1 && record.type === 'PULANG') {
+      const existing = this.attendances[existingDayIndex];
+      existing.jamPulang = record.jamPulang || timePart;
+      existing.serverReceivedTime = new Date().toISOString();
+      existing.syncStatus = 'TERKIRIM';
+      existing.statusSinkronisasi = 'TERKIRIM';
+      this.addLog(emp.id, emp.nama, 'PRESENSI_PULANG', `Pukul ${existing.jamPulang} via ${record.method}`);
+      return existing;
     }
 
     const saved: PresensiRecord = {
       ...record,
       unitKerja: emp.unitKerja,
       status: determinedStatus,
+      jamMasuk: record.type === 'MASUK' ? (record.jamMasuk || timePart) : record.jamMasuk,
+      jamPulang: record.type === 'PULANG' ? (record.jamPulang || timePart) : record.jamPulang,
       syncStatus: 'TERKIRIM',
       statusSinkronisasi: 'TERKIRIM',
       serverReceivedTime: new Date().toISOString(),
-      tanggal: record.tanggal || todayStr,
+      tanggal: recDate,
       createdAt: new Date().toISOString(),
     };
 
@@ -630,6 +661,9 @@ class InMemoryDataStore {
   }
 }
 
-// Global Singleton Instance
-export const globalStore = new InMemoryDataStore();
+// Global Singleton Instance across Next.js module invocations
+export const globalStore: InMemoryDataStore =
+  (globalThis as any).globalStore || new InMemoryDataStore();
+(globalThis as any).globalStore = globalStore;
+
 export const store = globalStore;

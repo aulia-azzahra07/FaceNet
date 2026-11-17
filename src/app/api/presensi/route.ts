@@ -4,19 +4,24 @@ import { requireAuth } from '@/lib/auth';
 import { PresensiRecord } from '@/types';
 
 export async function GET(req: Request) {
-  const auth = requireAuth(req, ['ADMIN', 'PIMPINAN']);
-  if ('error' in auth) {
-    return auth.error;
+  const { searchParams } = new URL(req.url);
+  const nipParam = searchParams.get('nip');
+
+  // Jika dipanggil dari aplikasi mobile dengan parameter ?nip=..., izinkan tanpa sesi web admin
+  if (!nipParam) {
+    const auth = requireAuth(req, ['ADMIN', 'PIMPINAN']);
+    if ('error' in auth) {
+      return auth.error;
+    }
   }
 
-  const { searchParams } = new URL(req.url);
   const tanggal = searchParams.get('tanggal') || undefined;
   const unitKerja = searchParams.get('unitKerja') || undefined;
   const status = (searchParams.get('status') as any) || undefined;
   const syncStatus = (searchParams.get('syncStatus') as any) || undefined;
-  const search = searchParams.get('search') || undefined;
+  const search = searchParams.get('search') || nipParam || undefined;
   const page = parseInt(searchParams.get('page') || '1', 10);
-  const limit = parseInt(searchParams.get('limit') || '25', 10);
+  const limit = parseInt(searchParams.get('limit') || '50', 10);
 
   const result = globalStore.getAttendances({
     tanggal,
